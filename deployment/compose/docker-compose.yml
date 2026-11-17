@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  control-plane:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.control-plane
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - control-plane
+    restart: unless-stopped
+
+  agent-sandbox:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.agent
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    depends_on:
+      - control-plane

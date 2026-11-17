@@ -1,0 +1,29 @@
+[package]
+name = "badger-agent"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "badger-agent"
+path = "src/main.rs"
+
+[dependencies]
+badger-common = { path = "../badger-common" }
+badger-identity = { path = "../badger-identity" }
+badger-policy = { path = "../badger-policy" }
+badger-sandbox = { path = "../badger-sandbox" }
+badger-sensor = { path = "../badger-sensor" }
+badger-threat = { path = "../badger-threat" }
+badger-containment = { path = "../badger-containment" }
+
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+clap.workspace = true
+tokio.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

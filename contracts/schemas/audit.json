@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BadgerAuditRecord",
+  "type": "object",
+  "required": [
+    "record_id",
+    "timestamp_unix",
+    "actor",
+    "action",
+    "entity_id",
+    "entity_type",
+    "sha256_prev_record"
+  ],
+  "properties": {
+    "record_id": { "type": "string" },
+    "timestamp_unix": { "type": "integer" },
+    "actor": { "type": "string" },
+    "action": { "type": "string" },
+    "entity_id": { "type": "string" },
+    "entity_type": { "type": "string" },
+    "details_json": { "type": "string" },
+    "sha256_prev_record": { "type": "string" },
+    "signature": { "type": "string" }
+  }
+}

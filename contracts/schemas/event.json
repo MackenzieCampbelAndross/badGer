@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BadgerRuntimeEvent",
+  "type": "object",
+  "required": [
+    "event_id",
+    "timestamp_unix_nanos",
+    "workload_id",
+    "event_type",
+    "outcome",
+    "severity",
+    "sensor_provenance"
+  ],
+  "properties": {
+    "event_id": { "type": "string" },
+    "timestamp_unix_nanos": { "type": "integer" },
+    "workload_id": { "type": "string" },
+    "principal_id": { "type": "string" },
+    "process_id": { "type": "integer" },
+    "parent_process_id": { "type": "integer" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "process_exec",
+        "process_exit",
+        "file_open",
+        "file_write",
+        "net_connect",
+        "privilege_change",
+        "syscall_blocked",
+        "policy_violation",
+        "sensor_status_change"
+      ]
+    },
+    "resource": { "type": "string" },
+    "outcome": {
+      "type": "string",
+      "enum": ["allowed", "blocked", "audited", "failed"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["informational", "low", "medium", "high", "critical"]
+    },
+    "sensor_provenance": { "type": "string" },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

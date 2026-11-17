@@ -1,0 +1,77 @@
+{
+  "id": "pol-strict-v1",
+  "tenant_id": "tenant-corp",
+  "name": "Strict Autonomous Agent Policy",
+  "version": 1,
+  "allowed_executables": [
+    "/bin/bash",
+    "/bin/sh",
+    "/usr/bin/python3",
+    "/usr/bin/node"
+  ],
+  "denied_executables": [
+    "/bin/nc",
+    "/usr/bin/ncat",
+    "/usr/bin/netcat",
+    "/usr/bin/nmap",
+    "/usr/bin/tcpdump"
+  ],
+  "filesystem_rules": [
+    {
+      "path": "/workspace",
+      "access": "rw",
+      "recursive": true
+    },
+    {
+      "path": "/tmp",
+      "access": "rw",
+      "recursive": true
+    },
+    {
+      "path": "/etc",
+      "access": "ro",
+      "recursive": true
+    },
+    {
+      "path": "/etc/shadow",
+      "access": "none",
+      "recursive": false
+    },
+    {
+      "path": "/root",
+      "access": "none",
+      "recursive": true
+    }
+  ],
+  "network_rules": [
+    {
+      "destination": "127.0.0.1",
+      "port": 8080,
+      "protocol": "tcp",
+      "allow": true
+    },
+    {
+      "destination": "*",
+      "port": 0,
+      "protocol": "all",
+      "allow": false
+    }
+  ],
+  "limits": {
+    "max_memory_bytes": 268435456,
+    "cpu_quota_us": 100000,
+    "cpu_period_us": 100000,
+    "max_pids": 32
+  },
+  "drop_capabilities": [
+    "CAP_SYS_ADMIN",
+    "CAP_NET_ADMIN",
+    "CAP_NET_RAW",
+    "CAP_DAC_OVERRIDE",
+    "CAP_SYS_PTRACE"
+  ],
+  "disallow_privilege_escalation": true,
+  "valid_from_unix": 0,
+  "valid_until_unix": 1893456000,
+  "signature": ""
+}

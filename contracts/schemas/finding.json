@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BadgerSecurityFinding",
+  "type": "object",
+  "required": [
+    "finding_id",
+    "workload_id",
+    "detection_rule",
+    "severity",
+    "confidence",
+    "timestamp_unix",
+    "summary"
+  ],
+  "properties": {
+    "finding_id": { "type": "string" },
+    "workload_id": { "type": "string" },
+    "detection_rule": { "type": "string" },
+    "severity": {
+      "type": "string",
+      "enum": ["informational", "low", "medium", "high", "critical"]
+    },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+    "timestamp_unix": { "type": "integer" },
+    "summary": { "type": "string" },
+    "trigger_event_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "recommended_response": { "type": "string" },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

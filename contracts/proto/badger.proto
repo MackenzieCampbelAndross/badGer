@@ -1,0 +1,260 @@
+syntax = "proto3";
+
+package badger.v1;
+
+option go_package = "github.com/badger-security/badger/contracts/proto/v1;badgerv1";
+
+// -----------------------------------------------------------------------------
+// Identity Intelligence Types
+// -----------------------------------------------------------------------------
+
+enum PrincipalType {
+  PRINCIPAL_TYPE_UNSPECIFIED = 0;
+  PRINCIPAL_TYPE_AGENT = 1;
+  PRINCIPAL_TYPE_MCP_SERVER = 2;
+  PRINCIPAL_TYPE_SERVICE_ACCOUNT = 3;
+  PRINCIPAL_TYPE_HUMAN_OPERATOR = 4;
+  PRINCIPAL_TYPE_CI_WORKFLOW = 5;
+}
+
+enum WorkloadState {
+  WORKLOAD_STATE_UNSPECIFIED = 0;
+  WORKLOAD_STATE_REGISTERED = 1;
+  WORKLOAD_STATE_STAGING = 2;
+  WORKLOAD_STATE_RUNNING = 3;
+  WORKLOAD_STATE_SUSPENDED = 4;
+  WORKLOAD_STATE_CONTAINED = 5;
+  WORKLOAD_STATE_TERMINATED = 6;
+  WORKLOAD_STATE_FAILED = 7;
+}
+
+enum SensorHealthStatus {
+  SENSOR_STATUS_UNKNOWN = 0;
+  SENSOR_STATUS_PROTECTED = 1;
+  SENSOR_STATUS_DEGRADED = 2;
+  SENSOR_STATUS_UNPROTECTED = 3;
+}
+
+message Tenant {
+  string id = 1;
+  string name = 2;
+  int64 created_at_unix = 3;
+}
+
+message Principal {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  PrincipalType principal_type = 4;
+  map<string, string> labels = 5;
+  int64 created_at_unix = 6;
+}
+
+message Workload {
+  string id = 1;
+  string tenant_id = 2;
+  string principal_id = 3;
+  string name = 4;
+  WorkloadState state = 5;
+  string policy_id = 6;
+  int32 policy_version = 7;
+  map<string, string> metadata = 8;
+  int64 registered_at_unix = 9;
+  int64 updated_at_unix = 10;
+  SensorHealthStatus sensor_status = 11;
+}
+
+message CredentialMetadata {
+  string id = 1;
+  string tenant_id = 2;
+  string workload_id = 3;
+  string credential_type = 4; // e.g. "api_token", "oauth_token", "mtls_cert"
+  string issuer = 5;
+  string audience = 6;
+  int64 issued_at_unix = 7;
+  int64 expires_at_unix = 8;
+  bool is_revoked = 9;
+  // NOTE: Strictly no raw credentials stored.
+  string fingerprint_sha256 = 10;
+}
+
+// -----------------------------------------------------------------------------
+// Capability Governance & Policy Types
+// -----------------------------------------------------------------------------
+
+message NetworkRule {
+  string destination = 1; // CIDR, hostname, or IP
+  int32 port = 2;
+  string protocol = 3;   // "tcp", "udp", "all"
+  bool allow = 4;
+}
+
+message FilesystemRule {
+  string path = 1;
+  string access = 2;     // "ro", "rw", "none"
+  bool recursive = 3;
+}
+
+message ResourceLimits {
+  int64 max_memory_bytes = 1;
+  int64 cpu_quota_us = 2;
+  int64 cpu_period_us = 3;
+  int32 max_pids = 4;
+}
+
+message CapabilityPolicy {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  int32 version = 4;
+  repeated string allowed_executables = 5;
+  repeated string denied_executables = 6;
+  repeated FilesystemRule filesystem_rules = 7;
+  repeated NetworkRule network_rules = 8;
+  ResourceLimits limits = 9;
+  repeated string drop_capabilities = 10;
+  bool disallow_privilege_escalation = 11;
+  int64 valid_from_unix = 12;
+  int64 valid_until_unix = 13;
+  string signature = 14;
+}
+
+// -----------------------------------------------------------------------------
+// Runtime Intelligence & Telemetry Events
+// -----------------------------------------------------------------------------
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_PROCESS_EXEC = 1;
+  EVENT_TYPE_PROCESS_EXIT = 2;
+  EVENT_TYPE_FILE_OPEN = 3;
+  EVENT_TYPE_FILE_WRITE = 4;
+  EVENT_TYPE_NET_CONNECT = 5;
+  EVENT_TYPE_PRIVILEGE_CHANGE = 6;
+  EVENT_TYPE_SYSCALL_BLOCKED = 7;
+  EVENT_TYPE_POLICY_VIOLATION = 8;
+  EVENT_TYPE_SENSOR_STATUS_CHANGE = 9;
+}
+
+enum EnforcementOutcome {
+  ENFORCEMENT_OUTCOME_UNSPECIFIED = 0;
+  ENFORCEMENT_OUTCOME_ALLOWED = 1;
+  ENFORCEMENT_OUTCOME_BLOCKED = 2;
+  ENFORCEMENT_OUTCOME_AUDITED = 3;
+  ENFORCEMENT_OUTCOME_FAILED = 4;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFORMATIONAL = 1;
+  SEVERITY_LOW = 2;
+  SEVERITY_MEDIUM = 3;
+  SEVERITY_HIGH = 4;
+  SEVERITY_CRITICAL = 5;
+}
+
+message RuntimeEvent {
+  string event_id = 1;
+  int64 timestamp_unix_nanos = 2;
+  string workload_id = 3;
+  string principal_id = 4;
+  int32 process_id = 5;
+  int32 parent_process_id = 6;
+  EventType event_type = 7;
+  string resource = 8;
+  EnforcementOutcome outcome = 9;
+  Severity severity = 10;
+  string sensor_provenance = 11; // e.g. "ebpf-tracepoint", "landlock-lsm", "seccomp-notify", "proc-monitor"
+  map<string, string> attributes = 12;
+}
+
+// -----------------------------------------------------------------------------
+// Threat Detection Types
+// -----------------------------------------------------------------------------
+
+message SecurityFinding {
+  string finding_id = 1;
+  string workload_id = 2;
+  string detection_rule = 3;
+  Severity severity = 4;
+  float confidence = 5; // 0.0 to 1.0
+  int64 timestamp_unix = 6;
+  string summary = 7;
+  repeated string trigger_event_ids = 8;
+  string recommended_response = 9;
+  map<string, string> evidence = 10;
+}
+
+// -----------------------------------------------------------------------------
+// Autonomous Containment & Audit Types
+// -----------------------------------------------------------------------------
+
+enum ResponseActionType {
+  ACTION_TYPE_UNSPECIFIED = 0;
+  ACTION_TYPE_SUSPEND_WORKLOAD = 1;
+  ACTION_TYPE_RESTRICT_NETWORK = 2;
+  ACTION_TYPE_KILL_PROCESS = 3;
+  ACTION_TYPE_TERMINATE_WORKLOAD = 4;
+  ACTION_TYPE_REVOKE_CREDENTIAL = 5;
+  ACTION_TYPE_COLLECT_EVIDENCE = 6;
+}
+
+message ResponseAction {
+  string action_id = 1;
+  string workload_id = 2;
+  string finding_id = 3;
+  ResponseActionType action_type = 4;
+  int64 requested_at_unix = 5;
+  int64 completed_at_unix = 6;
+  bool verified = 7;
+  string verification_evidence = 8;
+  string error_message = 9;
+}
+
+message AuditRecord {
+  string record_id = 1;
+  int64 timestamp_unix = 2;
+  string actor = 3;
+  string action = 4;
+  string entity_id = 5;
+  string entity_type = 6;
+  string details_json = 7;
+  string sha256_prev_record = 8; // Tamper-evident chaining
+  string signature = 9;
+}
+
+// -----------------------------------------------------------------------------
+// Service API Contracts
+// -----------------------------------------------------------------------------
+
+message RegisterWorkloadRequest {
+  string tenant_id = 1;
+  string principal_id = 2;
+  string workload_name = 3;
+  CapabilityPolicy policy = 4;
+  map<string, string> metadata = 5;
+}
+
+message RegisterWorkloadResponse {
+  Workload workload = 1;
+  string assigned_identity = 2;
+}
+
+message IngestEventsRequest {
+  repeated RuntimeEvent events = 1;
+}
+
+message IngestEventsResponse {
+  int32 accepted_count = 1;
+  repeated string generated_finding_ids = 2;
+}
+
+message GetWorkloadStatusRequest {
+  string workload_id = 1;
+}
+
+message GetWorkloadStatusResponse {
+  Workload workload = 1;
+  repeated SecurityFinding active_findings = 2;
+  SensorHealthStatus sensor_status = 3;
+}

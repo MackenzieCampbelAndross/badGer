@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BadgerPolicy",
+  "type": "object",
+  "required": ["id", "tenant_id", "name", "version", "limits"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "name": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "allowed_executables": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "denied_executables": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "filesystem_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "access"],
+        "properties": {
+          "path": { "type": "string" },
+          "access": { "type": "string", "enum": ["ro", "rw", "none"] },
+          "recursive": { "type": "boolean" }
+        }
+      }
+    },
+    "network_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["destination", "allow"],
+        "properties": {
+          "destination": { "type": "string" },
+          "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+          "protocol": { "type": "string", "enum": ["tcp", "udp", "all"] },
+          "allow": { "type": "boolean" }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "required": ["max_memory_bytes", "max_pids"],
+      "properties": {
+        "max_memory_bytes": { "type": "integer", "minimum": 1048576 },
+        "cpu_quota_us": { "type": "integer", "minimum": 0 },
+        "cpu_period_us": { "type": "integer", "minimum": 1000 },
+        "max_pids": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "drop_capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "disallow_privilege_escalation": { "type": "boolean" },
+    "valid_from_unix": { "type": "integer" },
+    "valid_until_unix": { "type": "integer" },
+    "signature": { "type": "string" }
+  }
+}

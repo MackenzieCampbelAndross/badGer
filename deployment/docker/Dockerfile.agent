@@ -1,0 +1,18 @@
+FROM rust:1.85-bookworm AS builder
+
+WORKDIR /usr/src/badger
+COPY Cargo.toml ./
+COPY agent ./agent
+
+RUN cargo build --release -p badger-agent
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libseccomp2 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/badger/target/release/badger-agent /usr/local/bin/badger-agent
+
+ENTRYPOINT ["/usr/local/bin/badger-agent"]
+CMD ["adversarial"]

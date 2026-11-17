@@ -1,0 +1,13 @@
+FROM golang:1.22-bookworm AS builder
+
+WORKDIR /usr/src/badger
+COPY control-plane ./control-plane
+
+WORKDIR /usr/src/badger/control-plane
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o /badger-server ./cmd/badger-server
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /badger-server /usr/local/bin/badger-server
+
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/badger-server"]

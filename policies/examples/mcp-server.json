@@ -1,0 +1,50 @@
+{
+  "id": "pol-mcp-server-v1",
+  "tenant_id": "tenant-corp",
+  "name": "Model Context Protocol Tool Integration Policy",
+  "version": 1,
+  "allowed_executables": [
+    "/usr/bin/node",
+    "/usr/bin/python3"
+  ],
+  "denied_executables": [
+    "/bin/bash",
+    "/bin/sh",
+    "/usr/bin/curl",
+    "/usr/bin/wget"
+  ],
+  "filesystem_rules": [
+    {
+      "path": "/data/mcp",
+      "access": "rw",
+      "recursive": true
+    },
+    {
+      "path": "/etc",
+      "access": "ro",
+      "recursive": true
+    }
+  ],
+  "network_rules": [
+    {
+      "destination": "127.0.0.1",
+      "port": 3001,
+      "protocol": "tcp",
+      "allow": true
+    }
+  ],
+  "limits": {
+    "max_memory_bytes": 536870912,
+    "cpu_quota_us": 200000,
+    "cpu_period_us": 100000,
+    "max_pids": 64
+  },
+  "drop_capabilities": [
+    "CAP_SYS_ADMIN",
+    "CAP_NET_RAW"
+  ],
+  "disallow_privilege_escalation": true,
+  "valid_from_unix": 0,
+  "valid_until_unix": 1893456000,
+  "signature": ""
+}
