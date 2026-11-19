@@ -15,6 +15,7 @@ badger-identity = { path = "../badger-identity" }
 badger-policy = { path = "../badger-policy" }
 badger-sandbox = { path = "../badger-sandbox" }
 badger-sensor = { path = "../badger-sensor" }
+badger-network = { path = "../badger-network" }
 badger-threat = { path = "../badger-threat" }
 badger-containment = { path = "../badger-containment" }
 

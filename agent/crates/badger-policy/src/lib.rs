@@ -1,11 +1,41 @@
+pub mod audit;
+pub mod capability;
+pub mod compiler;
+pub mod delegation;
+pub mod distributor;
+pub mod enforcement;
+pub mod evaluator;
+pub mod least_privilege;
+pub mod model;
+pub mod signer;
+pub mod simulator;
+pub mod temporary;
+
+pub use audit::{PolicyAuditRecord, PolicyAuditService};
+pub use capability::Capability;
+pub use compiler::{CompiledPolicy, PolicyCompiler, PolicyValidator};
+pub use delegation::{DelegationGovernor, DelegationGrant};
+pub use distributor::PolicyDistributor;
+pub use enforcement::EnforcementBridge;
+pub use evaluator::PolicyEvaluator;
+pub use least_privilege::{LeastPrivilegeEngine, LeastPrivilegeRecommendation, RecommendationType};
+pub use model::{
+    ApprovalRequirements, ContextCondition, DecisionOutcome, EnforcementPath, EvaluationContext,
+    EvaluationDecision, Policy,
+};
+pub use signer::PolicySigner;
+pub use simulator::{PolicyDiffResult, PolicySimulator};
+pub use temporary::{TemporaryCapabilityGrant, TemporaryCapabilityStore};
+
 use badger_common::{
-    BadgerError, BadgerResult, CapabilityPolicy, FilesystemRule, FsAccess, NetworkRule,
+    BadgerError, BadgerResult, CapabilityPolicy, FilesystemRule, FsAccess,
 };
 use chrono::Utc;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+/// Legacy-compatible PolicyEngine maintaining existing contracts for sandbox & agent runners
 #[derive(Debug, Clone)]
 pub struct PolicyEngine {
     policies: Arc<RwLock<HashMap<String, CapabilityPolicy>>>,
@@ -122,10 +152,9 @@ impl PolicyEngine {
                     return Ok(true);
                 }
             }
-            return Ok(false); // Default deny if not in allowlist
+            return Ok(false);
         }
 
-        // If no allowlist defined, allow unless explicitly denied
         Ok(true)
     }
 
@@ -140,7 +169,6 @@ impl PolicyEngine {
             .get_policy(policy_id)
             .ok_or_else(|| BadgerError::PolicyInvalid(format!("Policy '{}' not found", policy_id)))?;
 
-        // Most specific path match
         let mut best_match: Option<&FilesystemRule> = None;
         for rule in &pol.filesystem_rules {
             if path == rule.path || (rule.recursive && path.starts_with(&rule.path)) {
@@ -161,7 +189,6 @@ impl PolicyEngine {
                 FsAccess::Rw => Ok(true),
             }
         } else {
-            // Default deny for unknown paths outside rule definitions
             Ok(false)
         }
     }
@@ -185,8 +212,71 @@ impl PolicyEngine {
             }
         }
 
-        // Default deny
         Ok(false)
+    }
+}
+
+/// Unified Capability Governance Subsystem
+pub struct CapabilityGovernanceSubsystem {
+    pub distributor: Arc<PolicyDistributor>,
+    pub temporary_store: Arc<TemporaryCapabilityStore>,
+    pub delegation_governor: Arc<DelegationGovernor>,
+    pub least_privilege: Arc<RwLock<LeastPrivilegeEngine>>,
+    pub audit_service: Arc<PolicyAuditService>,
+}
+
+impl CapabilityGovernanceSubsystem {
+    pub fn new(signing_key: &[u8], cache_dir: &std::path::Path) -> Self {
+        Self {
+            distributor: Arc::new(PolicyDistributor::new(signing_key, cache_dir)),
+            temporary_store: Arc::new(TemporaryCapabilityStore::new()),
+            delegation_governor: Arc::new(DelegationGovernor::default()),
+            least_privilege: Arc::new(RwLock::new(LeastPrivilegeEngine::default())),
+            audit_service: Arc::new(PolicyAuditService::new()),
+        }
+    }
+
+    /// Evaluates a live capability request against active policies and temporary grants
+    pub fn evaluate_capability(
+        &self,
+        ctx: &EvaluationContext,
+    ) -> EvaluationDecision {
+        let active = self.distributor.get_active_compiled_policies();
+        let refs: Vec<&CompiledPolicy> = active.iter().collect();
+
+        // 1. Evaluate base compiled policies
+        let mut decision = PolicyEvaluator::evaluate(ctx, &refs);
+
+        // 2. If denied by base policy, check if covered by an active temporary grant
+        if decision.decision == DecisionOutcome::Deny {
+            let active_temps = self.temporary_store.get_active_capabilities_for_workload(
+                &ctx.workload,
+                ctx.timestamp_unix,
+            );
+            for temp_cap in active_temps {
+                if temp_cap.subsumes(&ctx.capability) {
+                    decision = EvaluationDecision {
+                        decision: DecisionOutcome::Allow,
+                        policy_id: "temporary_grant".to_string(),
+                        policy_version: 1,
+                        matched_rule: format!("TEMPORARY_GRANT: {:?}", temp_cap),
+                        principal: ctx.principal.clone(),
+                        workload: ctx.workload.clone(),
+                        resource: ctx.resource.clone(),
+                        capability: ctx.capability.clone(),
+                        reason: "Authorized by active temporary capability grant".to_string(),
+                        evaluated_at: ctx.timestamp_unix,
+                        enforcement_path: decision.enforcement_path,
+                    };
+                    break;
+                }
+            }
+        }
+
+        // Record audit trail
+        let _ = self.audit_service.record_decision(&decision);
+
+        decision
     }
 }
 

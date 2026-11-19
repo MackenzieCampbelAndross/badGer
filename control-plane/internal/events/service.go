@@ -12,11 +12,11 @@ import (
 )
 
 type Service struct {
-	mu          sync.RWMutex
-	events      []*models.RuntimeEvent
-	findings    []*models.SecurityFinding
-	auditLogs   []*models.AuditRecord
-	prevHash    string
+	mu        sync.RWMutex
+	events    []*models.RuntimeEvent
+	findings  []*models.SecurityFinding
+	auditLogs []*models.AuditRecord
+	prevHash  string
 }
 
 func NewService() *Service {
@@ -118,14 +118,53 @@ func (s *Service) ListEvents(limit int) []*models.RuntimeEvent {
 	return s.events[start:]
 }
 
+func (s *Service) ListEventsForWorkloads(limit int, workloadIDs map[string]bool) []*models.RuntimeEvent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	res := make([]*models.RuntimeEvent, 0)
+	for _, e := range s.events {
+		if workloadIDs[e.WorkloadID] {
+			res = append(res, e)
+		}
+	}
+	if limit > 0 && len(res) > limit {
+		res = res[len(res)-limit:]
+	}
+	return res
+}
+
 func (s *Service) ListFindings() []*models.SecurityFinding {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.findings
 }
 
+func (s *Service) ListFindingsForWorkloads(workloadIDs map[string]bool) []*models.SecurityFinding {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	res := make([]*models.SecurityFinding, 0)
+	for _, f := range s.findings {
+		if workloadIDs[f.WorkloadID] {
+			res = append(res, f)
+		}
+	}
+	return res
+}
+
 func (s *Service) ListAuditRecords() []*models.AuditRecord {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.auditLogs
+}
+
+func (s *Service) ListAuditRecordsForWorkloads(workloadIDs map[string]bool) []*models.AuditRecord {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	res := make([]*models.AuditRecord, 0)
+	for _, a := range s.auditLogs {
+		if workloadIDs[a.EntityID] {
+			res = append(res, a)
+		}
+	}
+	return res
 }

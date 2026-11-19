@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 badger-common = { path = "../badger-common" }
+badger-network = { path = "../badger-network" }
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true

@@ -6,6 +6,7 @@ members = [
     "agent/crates/badger-policy",
     "agent/crates/badger-sandbox",
     "agent/crates/badger-sensor",
+    "agent/crates/badger-network",
     "agent/crates/badger-threat",
     "agent/crates/badger-containment",
     "agent/crates/badger-agent",

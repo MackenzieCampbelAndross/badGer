@@ -148,6 +148,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 workload_id: reg.id.clone(),
                 policy,
                 isolate_network: true,
+                network_policy: None,
             });
 
             sandbox.prepare()?;
@@ -157,6 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 workload_id: reg.id.clone(),
                 principal_id: reg.principal_id.clone(),
                 target_pid: std::process::id(),
+                cgroup_id: 0,
                 enable_ebpf: true,
             });
             sensor.start()?;

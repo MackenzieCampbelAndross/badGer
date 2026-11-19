@@ -1,9 +1,10 @@
 # BADGER: Autonomous Agent Security & Runtime Containment Infrastructure
 
 [![Linux Kernel](https://img.shields.io/badge/Linux-6.6%20LTS-blue.svg)](https://kernel.org)
-[![Security Primitives](https://img.shields.io/badge/Security-Landlock%20%7C%20Seccomp--BPF%20%7C%20cgroups%20v2-green.svg)](#security-architecture)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Adversarial Verification](https://img.shields.io/badge/Adversarial%20Suite-8%2F8%20PASS-brightgreen.svg)](#adversarial-verification)
+[![Security Primitives](https://img.shields.io/badge/Security-Landlock%20ABI%20v3%20%7C%20eBPF%20%7C%20cgroups%20v2-green.svg)](#security-architecture)
+[![Adversarial Suite](https://img.shields.io/badge/Adversarial%20Suite-8%2F8%20PASS-brightgreen.svg)](#adversarial-verification)
+[![Test Suite](https://img.shields.io/badge/Test%20Suite-100%25%20PASS-brightgreen.svg)](#test-metrics)
+[![Enterprise Release](https://img.shields.io/badge/Release-V1.0%20Enterprise-blue.svg)](docs/V1_RELEASE_REPORT.md)
 
 > **Core Mission:** Secure every identity. Constrain every capability. Observe every action. Contain every breach.  
 > **Core Thesis:** Never trust an autonomous agent merely because it runs inside a trusted environment. BADGER independently governs machine identity, execution boundaries, runtime behavior, capabilities, and containment outside the agent's own decision-making process.
@@ -14,42 +15,18 @@
 
 **BADGER** is an enterprise-grade autonomous agent security and runtime containment infrastructure designed to protect host operating systems, cloud environments, and internal networks from rogue, hallucinating, prompt-injected, or compromised autonomous software.
 
-BADGER enforces security boundaries at the operating system kernel level using native Linux security primitives, providing verifiable isolation and deterministic threat detection without relying on language model judgments for security decisions.
+BADGER enforces security boundaries at the operating system kernel level using native Linux security primitives (Landlock LSM ABI v3, Seccomp-BPF architecture-specific syscall filters, cgroups v2 freezer, and eBPF socket address hooks), providing verifiable isolation and deterministic threat detection without relying on language model judgments for security decisions.
 
-### BADGER's Six Core Engines
+### BADGER's Subsystems
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           BADGER CONTROL PLANE                              │
-│  ┌─────────────────────────┐                 ┌───────────────────────────┐  │
-│  │   ENGINE 01: IDENTITY   │◄───────────────►│   ENGINE 05: CAPABILITY   │  │
-│  │   INTELLIGENCE ENGINE   │                 │     GOVERNANCE ENGINE     │  │
-│  └────────────┬────────────┘                 └─────────────┬─────────────┘  │
-│               │                                            │                │
-│               ▼                                            ▼                │
-│  ┌─────────────────────────┐                 ┌───────────────────────────┐  │
-│  │   ENGINE 04: THREAT     │                 │   ENGINE 06: AUTONOMOUS   │  │
-│  │    DETECTION ENGINE     │────────────────►│    CONTAINMENT ENGINE     │  │
-│  └────────────▲────────────┘                 └─────────────┬─────────────┘  │
-└───────────────┼────────────────────────────────────────────┼────────────────┘
-                │ Telemetry Stream                           │ Containment
-┌───────────────┼────────────────────────────────────────────┼────────────────┐
-│               │             BADGER DATA PLANE              │                │
-│  ┌────────────┴────────────┐                 ┌─────────────▼─────────────┐  │
-│  │   ENGINE 03: RUNTIME    │                 │   ENGINE 02: EXECUTION    │  │
-│  │   INTELLIGENCE SENSOR   │                 │     ISOLATION ENGINE      │  │
-│  │ (eBPF / Tracepoints /   │                 │ (Namespaces / cgroups v2 /│  │
-│  │   procfs fallback)      │                 │  Landlock / Seccomp-BPF)  │  │
-│  └─────────────────────────┘                 └───────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-1. **Engine 01: Identity Intelligence Engine** (`badger-identity`) — Assigns cryptographically verifiable, stable workload identities (SPIFFE ID), tracks credential relationships without storing raw secrets, maps principal ownership, and detects identity drift.
-2. **Engine 02: Execution Isolation Engine** (`badger-sandbox`) — Enforces multi-namespace isolation (PID, Mount, Net, IPC, UTS), cgroups v2 resource quotas (`memory.max`, `pids.max`, `cpu.max`), Seccomp-BPF system call filtering, and Landlock LSM filesystem restriction.
-3. **Engine 03: Runtime Intelligence Engine** (`badger-sensor`) — Observes process creation, file operations, socket connections, and privilege alterations via eBPF/tracepoints with transparent degradation tracking (`Protected`, `Degraded`, `Unprotected`).
-4. **Engine 04: Threat Detection Engine** (`badger-threat`) — Deterministic, explainable detection rules (`DET-FS-001`, `DET-NET-002`, `DET-PROC-003`, `DET-SYSCALL-005`, `DET-INTEG-006`) generating auditable findings.
-5. **Engine 05: Capability Governance Engine** (`badger-policy`) — Cryptographically signed, versioned capability policy manifests with explicit path, network, and system call allowlists.
-6. **Engine 06: Autonomous Containment Engine** (`badger-containment`) — Idempotent, bounded containment actions (`cgroup.freeze`, process termination with `ESRCH` verification, network namespace isolation) with tamper-evident SHA-256 hash chaining.
+1. **Native eBPF Runtime Intelligence Engine** (`badger-sensor`) — 6 kernel tracepoint probes (`sched_process_exec`, `sched_process_exit`, `sched_process_fork`, `sys_enter_connect`, `sys_enter_openat`, `sys_enter_setuid`), 256KB bounded ring buffer, and deterministic cgroup inode attribution.
+2. **Granular Network Egress Enforcement Engine** (`badger-network`) — Kernel-level cgroup socket connect hooks (`cgroup/connect4`, `cgroup/connect6`), AWS/GCP metadata drops (`169.254.169.254`), and monotonic policy rollbacks.
+3. **Machine Identity Intelligence Engine** (`badger-identity`) — Canonical identity graph (Principals, Workloads, Credentials, Resources), keyed HMAC-SHA256 fingerprinting (zero raw secrets), SPIFFE X.509 SVID rotation, and drift detection.
+4. **Capability Governance & Policy Engine** (`badger-policy`) — 12 strongly-typed capabilities, subsumption and intersection algebra, anti-rollback distribution, delegation depth enforcement, and evidence-based least privilege recommendations.
+5. **Autonomous Containment & Incident Response** (`badger-containment`) — 10 verifiable response actions (`SuspendWorkload`, `FreezeCgroup`, `KillProcess`, `IsolateNetwork`, `RevokeCredentials`, `QuarantineWorkload`), 10-stage response lifecycle, and gated operator recovery.
+6. **Execution Isolation Engine** (`badger-sandbox`) — Multi-namespace isolation (PID, Mount, Net, IPC, UTS), cgroups v2 quotas (`memory.max`, `pids.max`, `cgroup.freeze`), and Landlock LSM v3 path restrictions.
+7. **Enterprise Control Plane** (`control-plane`) — Multi-tenant Go REST gateway with RBAC roles (`Platform Administrator`, `Security Administrator`, `Security Analyst`, `Platform Engineer`, `Auditor`), audit hash chains, and integration catalog.
+8. **Enterprise Operator Console** (`frontend`) — React 18 / Vite console featuring 13 dedicated operational sections: Overview, Workloads, Identities, Identity Graph, Runtime Activity, Network Security, Threat Findings, Capability Governance, Policies, Containment, Audit Trail, Integrations, and Settings.
 
 ---
 

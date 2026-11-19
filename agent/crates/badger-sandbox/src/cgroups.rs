@@ -83,6 +83,10 @@ impl CgroupV2Manager {
         Ok(())
     }
 
+    pub fn thaw(&self) -> BadgerResult<()> {
+        self.unfreeze()
+    }
+
     pub fn read_stats(&self) -> (u64, u32) {
         let mut mem_current = 0u64;
         let mut pids_current = 0u32;
@@ -98,6 +102,10 @@ impl CgroupV2Manager {
         }
 
         (mem_current, pids_current)
+    }
+
+    pub fn get_path(&self) -> &Path {
+        &self.cgroup_path
     }
 
     pub fn cleanup(&self) {

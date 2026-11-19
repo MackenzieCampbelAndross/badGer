@@ -23,6 +23,9 @@ pub enum BadgerError {
     #[error("Containment failed: {0}")]
     Containment(String),
 
+    #[error("Network enforcement error: {0}")]
+    Network(String),
+
     #[error("Audit log error: {0}")]
     Audit(String),
 
